@@ -9,5 +9,5 @@ name = "netcode"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = "0.22.0"
-netcode-rs = "1.3.0"
+pyo3 = { version = "0.22.0", features = ["gil-refs"] }
+netcode-rs = { git = "https://github.com/benjamin-kirkbride/netcode-rs.git"}
