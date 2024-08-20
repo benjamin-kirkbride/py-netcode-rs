@@ -1,5 +1,7 @@
 #![allow(non_camel_case_types)] // TODO: how to selectively apply this?
 
+use log;
+
 use ::netcode::{
     try_generate_key as x_try_generate_key, Client as x_Client, ClientConfig as x_ClientConfig,
     ClientIndex as x_ClientIndex, ClientState as x_ClientState, ConnectToken as x_ConnectToken,
@@ -9,22 +11,21 @@ use ::netcode::{
     MAX_PACKET_SIZE as x_MAX_PACKET_SIZE, NETCODE_VERSION as x_NETCODE_VERSION,
     PRIVATE_KEY_BYTES as x_PRIVATE_KEY_BYTES, USER_DATA_BYTES as x_USER_DATA_BYTES,
 };
+use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::*;
 use std::fmt::{self, Debug};
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 
-// type Key = [u8; x_PRIVATE_KEY_BYTES as usize];
-
 #[pymodule]
 mod _netcode {
-    use pyo3::exceptions::PyRuntimeError;
 
     use super::*;
 
     #[pymodule_init]
     fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        pyo3_log::init();
         m.add("CONNECT_TOKEN_BYTES", x_CONNECT_TOKEN_BYTES)?;
         m.add("MAX_PACKET_SIZE", x_MAX_PACKET_SIZE)?;
 
@@ -282,9 +283,19 @@ mod _netcode {
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))
         }
 
-        fn recv(&mut self) -> PyResult<Option<(Vec<u8>, ClientIndex)>> {
+        // fn recv(&mut self) -> PyResult<Option<(Vec<u8>, ClientIndex)>> {
+        //     match self.inner.recv() {
+        //         Some((data, index)) => Ok(Some((data, _netcode::ClientIndex { inner: index }))),
+        //         None => Ok(None),
+        //     }
+        // }
+
+        fn recv(&mut self, py: Python<'_>) -> PyResult<Option<(PyObject, ClientIndex)>> {
             match self.inner.recv() {
-                Some((data, index)) => Ok(Some((data, _netcode::ClientIndex { inner: index }))),
+                Some((data, index)) => {
+                    let py_bytes = PyBytes::new_bound(py, &data);
+                    Ok(Some((py_bytes.into(), ClientIndex { inner: index })))
+                }
                 None => Ok(None),
             }
         }
@@ -304,9 +315,17 @@ mod _netcode {
         // TODO: handle optional args
 
         fn token(&mut self, client_id: u64) -> PyResult<ConnectToken> {
-            let token_builder_1 = self.inner.token(client_id);
+            let token_builder_1 = self
+                .inner
+                .token(client_id)
+                .expire_seconds(-1)
+                .timeout_seconds(-1);
             let token_1 = token_builder_1.generate().unwrap();
-            let token_builder_2 = self.inner.token(client_id);
+            let token_builder_2 = self
+                .inner
+                .token(client_id)
+                .expire_seconds(-1)
+                .timeout_seconds(-1);
             let token_2 = token_builder_2.generate().unwrap();
             let bytes = token_2.try_into_bytes().unwrap();
             Ok(ConnectToken {
@@ -352,6 +371,14 @@ mod _netcode {
 
         fn client_addr(&self, client_idx: &ClientIndex) -> Option<(String, u16)> {
             self.client_address(client_idx)
+        }
+
+        #[getter]
+        fn clients(&self) -> Vec<ClientIndex> {
+            self.inner
+                .iter_clients()
+                .map(|idx| _netcode::ClientIndex { inner: idx })
+                .collect()
         }
     }
 }

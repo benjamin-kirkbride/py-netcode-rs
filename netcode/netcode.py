@@ -1,5 +1,7 @@
 """Python bindings for the netcode.io library."""
 
+from typing import TypeAlias
+
 from _netcode import (
     CONNECT_TOKEN_BYTES,
     MAX_PACKET_SIZE,

@@ -1,3 +1,11 @@
+import logging
+from typing import TypeAlias
+
+# logging needs to be configured before importing the netcode module
+logging.getLogger().setLevel(logging.INFO)
+
+# ruff: noqa: E402
+
 from . import client_state
 from .netcode import (
     CONNECT_TOKEN_BYTES,
@@ -12,6 +20,9 @@ from .netcode import (
     generate_key,
 )
 
+Address: TypeAlias = tuple[str, int]
+ClientID: TypeAlias = int
+
 __all__ = [
     "CONNECT_TOKEN_BYTES",
     "MAX_PACKET_SIZE",
@@ -24,4 +35,7 @@ __all__ = [
     "generate_key",
     "Server",
     "ClientIndex",
+    "Address",
+    "ClientID",
+    "my_module",
 ]

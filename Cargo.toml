@@ -10,4 +10,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.22.0", features = ["gil-refs"] }
-netcode-rs = { git = "https://github.com/benjamin-kirkbride/netcode-rs.git"}
+pyo3-log = "0.11.0"
+netcode-rs = { path = "../netcode-rs" }
+log = { version = "0.4.22" }
